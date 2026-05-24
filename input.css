@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Component classes used in endpoints.html (must live in a CSS file to use @apply) */
+@layer components {
+  .modal-bg    { @apply fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4; }
+  .modal-box   { @apply bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg shadow-2xl; }
+  .modal-header{ @apply flex items-center justify-between px-5 py-4 border-b border-gray-800; }
+  .modal-close { @apply text-gray-400 hover:text-white text-2xl leading-none; }
+  .field-label { @apply block text-xs font-medium text-gray-400 mb-1; }
+  .field       { @apply w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white
+                        focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500; }
+  .file-input  { @apply block w-full text-sm text-gray-400 cursor-pointer
+                        file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0
+                        file:text-xs file:bg-gray-700 file:text-white hover:file:bg-gray-600; }
+  .btn-sm        { @apply text-xs border border-gray-700 hover:border-gray-500
+                          text-gray-300 hover:text-white px-2 py-1 rounded transition-colors; }
+  .btn-sm-danger { @apply text-xs border border-red-900 hover:border-red-700
+                          text-red-400 hover:text-red-300 px-2 py-1 rounded transition-colors; }
+  .btn-primary   { @apply bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium
+                          px-4 py-2 rounded-lg transition-colors; }
+  .btn-cancel    { @apply text-sm text-gray-400 hover:text-white px-4 py-2; }
+  .cron-btn      { @apply bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded
+                          px-2 py-1.5 text-xs text-gray-400 hover:text-white
+                          transition-colors cursor-pointer; }
+}

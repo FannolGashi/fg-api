@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Logs — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-bold text-white">Execution Logs</h1>
+  <div class="flex items-center gap-3">
+    <select id="filterEp" onchange="filterLogs()"
+            class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white
+                   focus:outline-none focus:border-blue-500">
+      <option value="">All endpoints</option>
+      {% for ep in endpoints %}
+      <option value="{{ ep.name }}">{{ ep.name }}</option>
+      {% endfor %}
+    </select>
+    <button onclick="location.reload()"
+            class="text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500
+                   px-3 py-1.5 rounded-lg transition-colors">
+      ↻ Refresh
+    </button>
+  </div>
+</div>
+
+<div class="bg-gray-900 border border-gray-800 rounded-xl">
+  {% if logs %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm" id="logsTable">
+      <thead>
+        <tr class="text-xs text-gray-500 uppercase tracking-wider border-b border-gray-800">
+          <th class="text-left px-5 py-3">Time</th>
+          <th class="text-left px-5 py-3">Endpoint</th>
+          <th class="text-left px-5 py-3">Result</th>
+          <th class="text-left px-5 py-3">Duration</th>
+          <th class="text-left px-5 py-3">Via</th>
+          <th class="text-left px-5 py-3">Output</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-800">
+        {% for log in logs %}
+        <tr class="log-row hover:bg-gray-800/40 transition-colors"
+            data-ep="{{ log.endpoint.name if log.endpoint else '' }}">
+          <td class="px-5 py-3 text-xs text-gray-400 whitespace-nowrap">
+            {{ log.started_at.strftime('%Y-%m-%d %H:%M:%S') }}
+          </td>
+          <td class="px-5 py-3 font-mono text-gray-300 text-xs">
+            {{ log.endpoint.name if log.endpoint else '—' }}
+          </td>
+          <td class="px-5 py-3">
+            {% if log.timed_out %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-900 text-yellow-300">timeout</span>
+            {% elif log.exit_code == 0 %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-900 text-green-300">✓ ok</span>
+            {% elif log.exit_code is none %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-700 text-gray-400">—</span>
+            {% else %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-red-900 text-red-300">exit {{ log.exit_code }}</span>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3 text-xs text-gray-400">
+            {% if log.duration_ms is not none %}{{ log.duration_ms }}ms{% else %}—{% endif %}
+          </td>
+          <td class="px-5 py-3">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-700 text-gray-400">{{ log.triggered_by }}</span>
+          </td>
+          <td class="px-5 py-3">
+            {% if log.stdout or log.stderr %}
+            <button onclick="showOutput(this)"
+                    data-out="{{ log.stdout | e }}"
+                    data-err="{{ log.stderr | e }}"
+                    class="text-xs text-blue-400 hover:text-blue-300 border border-blue-900 hover:border-blue-700 px-2 py-0.5 rounded transition-colors">
+              View
+            </button>
+            {% else %}
+            <span class="text-xs text-gray-600">(empty)</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-5 py-16 text-center text-gray-500 text-sm">No execution logs yet.</div>
+  {% endif %}
+</div>
+
+<!-- Output modal -->
+<div id="outputModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-3xl shadow-2xl">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+      <div class="flex gap-5">
+        <button id="tab-out" onclick="showTab('out')"
+                class="text-sm font-medium text-white border-b-2 border-blue-500 pb-1">stdout</button>
+        <button id="tab-err" onclick="showTab('err')"
+                class="text-sm font-medium text-gray-500 hover:text-white pb-1">stderr</button>
+      </div>
+      <button onclick="document.getElementById('outputModal').classList.add('hidden')"
+              class="text-gray-400 hover:text-white text-xl">&times;</button>
+    </div>
+    <div class="p-5">
+      <pre id="pane-out" class="font-mono text-xs text-green-300 bg-gray-950 border border-gray-800 rounded-lg p-4 overflow-auto max-h-96 whitespace-pre-wrap min-h-12"></pre>
+      <pre id="pane-err" class="hidden font-mono text-xs text-red-300 bg-gray-950 border border-gray-800 rounded-lg p-4 overflow-auto max-h-96 whitespace-pre-wrap min-h-12"></pre>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterLogs() {
+  const val = document.getElementById('filterEp').value;
+  document.querySelectorAll('.log-row').forEach(r => {
+    r.style.display = (!val || r.dataset.ep === val) ? '' : 'none';
+  });
+}
+
+function showOutput(btn) {
+  document.getElementById('pane-out').textContent = btn.dataset.out || '(empty)';
+  document.getElementById('pane-err').textContent = btn.dataset.err || '(empty)';
+  showTab('out');
+  document.getElementById('outputModal').classList.remove('hidden');
+}
+
+function showTab(which) {
+  ['out', 'err'].forEach(t => {
+    const pane = document.getElementById(`pane-${t}`);
+    const tab  = document.getElementById(`tab-${t}`);
+    const active = t === which;
+    pane.classList.toggle('hidden', !active);
+    tab.classList.toggle('text-white', active);
+    tab.classList.toggle('border-b-2', active);
+    tab.classList.toggle('border-blue-500', active);
+    tab.classList.toggle('text-gray-500', !active);
+  });
+}
+
+document.getElementById('outputModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.add('hidden');
+});
+</script>
+{% endblock %}

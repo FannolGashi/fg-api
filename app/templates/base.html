@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-950">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/tailwind.css">
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-full">
+
+<nav class="bg-gray-900 border-b border-gray-800 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex h-14 items-center justify-between">
+      <div class="flex items-center gap-6">
+        <a href="/ui" class="text-blue-400 font-bold text-lg tracking-tight">⚡ {{ app_name }}</a>
+        <a href="/ui"
+           class="text-sm {% if active_page == 'dashboard' %}text-white font-medium{% else %}text-gray-400 hover:text-gray-200{% endif %}">
+          Dashboard
+        </a>
+        {% if user %}
+        <a href="/ui/endpoints"
+           class="text-sm {% if active_page == 'endpoints' %}text-white font-medium{% else %}text-gray-400 hover:text-gray-200{% endif %}">
+          Endpoints
+        </a>
+        {% endif %}
+        <a href="/ui/logs"
+           class="text-sm {% if active_page == 'logs' %}text-white font-medium{% else %}text-gray-400 hover:text-gray-200{% endif %}">
+          Logs
+        </a>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="/api/docs" target="_blank" class="text-xs text-gray-500 hover:text-gray-300">API Docs</a>
+        {% if user %}
+          <span class="text-xs text-gray-500">{{ user.username }}</span>
+          <button onclick="logout()" class="text-xs text-red-400 hover:text-red-300 cursor-pointer">Logout</button>
+        {% else %}
+          <a href="/ui/login" class="text-sm text-blue-400 hover:text-blue-300">Login</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Toast notifications -->
+<div id="flash" class="hidden fixed top-4 right-4 z-50 w-80"></div>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  {% block content %}{% endblock %}
+</main>
+
+<script>
+function flash(msg, type = 'success') {
+  const el = document.getElementById('flash');
+  const cls = type === 'success'
+    ? 'bg-green-900 border border-green-700 text-green-200'
+    : 'bg-red-900 border border-red-700 text-red-200';
+  el.innerHTML = `<div class="p-3 rounded-lg shadow-lg text-sm ${cls}">${msg}</div>`;
+  el.classList.remove('hidden');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  location.href = '/ui/login';
+}
+
+async function api(url, method = 'GET', body = null, isForm = false) {
+  const opts = { method };
+  if (body && !isForm) {
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = JSON.stringify(body);
+  } else if (isForm) {
+    opts.body = body;
+  }
+  const r = await fetch(url, opts);
+  const ct = r.headers.get('Content-Type') || '';
+  const data = ct.includes('json') ? await r.json().catch(() => ({})) : {};
+  if (!r.ok) {
+    const msg = data.detail || `HTTP ${r.status}`;
+    throw new Error(Array.isArray(msg) ? msg.map(e => e.msg).join(', ') : String(msg));
+  }
+  return data;
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

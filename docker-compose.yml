@@ -1,0 +1,28 @@
+name: fg-api
+services:
+  api:
+    #container_name: fg-api
+    build: .
+    #image: fg-api:latest
+    ports:
+      - "8000:8000"
+    environment:
+      # Override these — especially SECRET_KEY and ADMIN_PASSWORD
+      - APP_NAME=${APP_NAME:-FG API}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      - SECRET_KEY=${SECRET_KEY:-please-change-this-secret-key-in-production-min-32}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      - DEFAULT_TIMEOUT=${DEFAULT_TIMEOUT:-30}
+      - DEFAULT_MAX_CONCURRENT=${DEFAULT_MAX_CONCURRENT:-3}
+      - MAX_TIMEOUT=${MAX_TIMEOUT:-300}
+    volumes:
+      - ./apidata:/data          # scripts, venvs, DB, logs all persist here
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
